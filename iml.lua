@@ -4,8 +4,8 @@ local iml = {}
 
 
 
----@alias iml._Widget {x:number, y:number, w:number,h:number}
----@alias iml._FrameState { state: table<number, table>, clickables: iml._Widget[] }
+---@alias iml._Panel {x:number, y:number, w:number,h:number, key:any}
+---@alias iml._FrameState { topPanel: iml._Panel? }
 ---@alias iml._Click {x:number, y:number, dx:number,dy:number}
 
 
@@ -84,22 +84,106 @@ function iml.getState(key, x,y,w,h)
 end
 
 
+
+---@param cl iml._Click
+---@return boolean
+local function isClick(cl)
+    -- if it moves less than X distance, its a click
+    return math.sqrt(cl.dx*cl.dx + cl.dy*cl.dy) > CLICK_MOVE_THRESHOLD
+end
+
+
+---@param x number
+---@param y number
+---@param w number
+---@param h number
+---@param px number
+---@param py number
+---@return boolean
+local function isInside(x, y, w, h, px, py)
+  return
+    px > x and
+    py > y and
+    px < x + w and
+    py < y + h
+end
+
+
+
+--- Creates a "Panel".
+--- Mouse click / mouse hover won't propagate through this region.
+---@param x number
+---@param y number
+---@param w number
+---@param h number
+---@param key any?
+function iml.panel(x,y,w,h, key)
+    -- If no key is specified,
+    -- uses hash(x,y,w,h) as a key.
+    if pointer_x and isInside(x,y,w,h, pointer_x, pointer_y) then
+        frameState.topPanel = {
+            x=x,y=y, w=w,h=h,
+            key = getKey(x,y,w,h,key)
+        }
+    end
+end
+
+
+local function isTop(key)
+    local tp = frameState and frameState.topPanel
+    if tp and tp.key == key then
+        return true
+    end
+    return false
+end
+
+--- Returns true if the region is currently being clicked.
+--- (Called continously every frame whilst the mouse is down)
+---@param x number
+---@param y number
+---@param w number
+---@param h number
+---@param button any
+---@param keyy any
+---@return boolean
 function iml.isClicked(x,y,w,h, button, keyy)
-    -- internally, uses hash(x,y,w,h) as a hash.
-    keyy = keyy or hash(x,y,w,h)
+    iml.panel(x,y,w,h, keyy)
+    keyy = getKey(x,y,w,h,keyy)
     button = button or 1
+    if isTop(keyy) then
+    end
+end
+
+
+---@param x number
+---@param y number
+---@param w number
+---@param h number
+---@param key any
+---@return boolean
+function iml.isHovered(x,y,w,h, key)
+    iml.panel(x,y,w,h, key)
+    key = getKey(x,y,w,h,key)
+    if isTop(key) then
+        return true
+    end
+    return false
+end
+
+
+
+--- Returns true ONCE if the region was just clicked.
+--- (ie ONLY the frame after `mousereleased`.)
+function iml.wasJustClicked(x,y,w,h, button, keyy)
+    keyy = getKey(x,y,w,h,keyy)
+    button = button or 1
+    error("nyi")
 end
 
 
 function iml.getDrag(x,y,w,h)
 
 end
-
-
-function iml.isHovered(x,y,w,h)
-
-end
-
 
 function iml.endFrame()
 
@@ -131,61 +215,14 @@ iml.keyreleased(...)
 function iml.mousepressed(x, y, button, istouch, presses)
     -- "when mouse is pressed, store the widget that was pressed."
     if not frameState then return end
-
-    for _, c in ipairs(frameState.clickables) do
-        
-    end
 end
 
 
----@param cl iml._Click
----@return boolean
-local function isClick(cl)
-    -- if it moves less than X distance, its a click
-    return math.sqrt(cl.dx*cl.dx + cl.dy*cl.dy) > CLICK_MOVE_THRESHOLD
-end
 
-
----@param w iml._Widget
----@param x number
----@param y number
----@return boolean
-local function isInside(w, x,y)
-  return
-    x >= w.x and
-    y >= w.y and
-    x <= w.x+w.w and
-    y <= w.y+w.h
-end
-
-
-local EMPTY = {}
-
-
----@param lis 
----@param x any
----@param y any
-local function findTop(lis, x,y)
-    local arr = frameState.clickables or EMPTY
-    for i=#arr, 1, -1 do
-        local widget = arr[i]
-        if isInside(widget, x,y) then
-
-            return
-        end
-    end
-end
 
 function iml.mousereleased(x, y, button, istouch, presses)
     local cl = clicks[button]
     clicks[button] = nil
-    if not cl then return end
-
-    if isClick(cl) then
-    else
-        -- its not a click: its a drag!
-
-    end
 end
 
 
