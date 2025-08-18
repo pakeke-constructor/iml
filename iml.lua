@@ -109,10 +109,10 @@ end
 ---@return boolean
 local function isInside(x, y, w, h, px, py)
   return
-    px > x and
-    py > y and
-    px < x + w and
-    py < y + h
+    px >= x and
+    py >= y and
+    px <= x + w and
+    py <= y + h
 end
 
 
