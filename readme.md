@@ -25,8 +25,8 @@ function Scroll:begin(sw, x,y,w,h)
     local r = Region(x,y,w,h)
     local main, scroll = r:splitHorizontal(0.9, 0.1)
 
-    iml.enableScroll(scroll:get())
     local dx, dy = iml.getDrag()
+    if dx then
         sw.scrollY = sw.scrollY + dy
     end
 end

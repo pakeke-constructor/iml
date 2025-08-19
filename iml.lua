@@ -6,7 +6,8 @@ local iml = {}
 
 ---@alias iml._Panel {x:number, y:number, w:number,h:number, key:any}
 ---@alias iml._FrameState { topPanel: iml._Panel? }
----@alias iml._Click {original_x:number, original_y:number, dx:number,dy:number}
+
+---@alias iml._Click {original_x:number, original_y:number, total_dx:number,total_dy:number, last_frame_dx:number,last_frame_dy:number, panel_key:iml._Panel? }
 
 
 ---@type iml._Panel?
@@ -28,11 +29,6 @@ local CLICK_MOVE_THRESHOLD = 4
 -- (eg if user is holding down the mouse)
 local currentClicks = {--[[
     [button] -> iml._Click
-
-    eg:
-    [1] -> {original_x=x, original_y=y, dx=dx,dy=dy},
-    [2] -> {original_x=x, original_y=y, dx=dx,dy=dy},
-    [3] -> ...
 ]]}
 
 
@@ -53,12 +49,15 @@ local clickPresses = {--[[
 local pointer_x = 0
 local pointer_y = 0
 
+local last_pointer_x = 0
+local last_pointer_y = 0
+
 
 ---@param cl iml._Click
 ---@return boolean
 local function isClick(cl)
     -- if it moves less than X distance, its a click
-    return math.sqrt(cl.dx*cl.dx + cl.dy*cl.dy) < CLICK_MOVE_THRESHOLD
+    return math.sqrt(cl.total_dx*cl.total_dx + cl.total_dy*cl.total_dy) < CLICK_MOVE_THRESHOLD
 end
 
 
@@ -72,9 +71,17 @@ end
 
 function iml.beginFrame()
     local px, py = pointer_x, pointer_y
+    local pdx, pdy = pointer_x-last_pointer_x, pointer_y-last_pointer_y
+
+    last_pointer_x = pointer_x
+    last_pointer_y = pointer_y
+
     for _, cl in pairs(currentClicks) do
-        cl.dx = px - cl.original_x
-        cl.dy = py - cl.original_y
+        cl.total_dx = px - cl.original_x
+        cl.total_dy = py - cl.original_y
+
+        cl.last_frame_dx = pdx
+        cl.last_frame_dy = pdy
     end
 
     frameState = {
@@ -137,7 +144,12 @@ function iml.panel(x,y,w,h, key)
 end
 
 
-function iml.pushMask()
+function iml.pushMask(x,y,w,h)
+
+end
+
+
+function iml.popMask()
 
 end
 
@@ -204,6 +216,20 @@ function iml.wasJustClicked(x,y,w,h, button, key)
 end
 
 
+---@param key any
+---@param button integer
+function iml.getDrag(key, x,y,w,h, button)
+    assertIsFrame()
+    iml.panel(x,y,w,h, key)
+    assert(key ~= nil and type(key) ~= "number", "Must provide a valid key")
+    local cl = currentClicks[button]
+    if cl and (cl.panel_key == key) and (not isClick(cl)) then
+        -- its dragging this element!
+        return cl.last_frame_dx, cl.last_frame_dy
+    end
+end
+
+
 
 --- Returns true ONCE if the region was just pressed by a mouse-button.
 --- (ie ONLY the frame after `mousepressed`.)
@@ -263,8 +289,16 @@ function iml.mousepressed(x, y, button, istouch, presses)
     local cl = {
         original_x=x,
         original_y=y,
-        dx = 0, dy = 0
+        total_dx = 0,
+        total_dy = 0,
+
+        last_frame_dx = 0,
+        last_frame_dy = 0,
+
+        -- the panel that was just clicked!
+        panel_key = (lastTopPanel and lastTopPanel.key) or nil
     }
+
     currentClicks[button] = cl
     clickPresses[button] = cl
 end
