@@ -264,17 +264,6 @@ end
 
 
 
-
-
-function iml.claimDrag(x,y,w,h, button, key)
-    assertIsFrame()
-    iml.panel(x,y,w,h, key)
-    if iml.wasJustPressed(x,y,w,h, button, key) then
-        -- claim the drag!
-    end
-end
-
-
 function iml.endFrame()
     lastTopPanel = frameState.topPanel or nil
     frameCount = frameCount + 1
