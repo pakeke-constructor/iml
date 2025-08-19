@@ -5,13 +5,13 @@ local iml = {}
 
 
 ---@alias iml._Panel {x:number, y:number, w:number,h:number, key:any}
----@alias iml._FrameState { topPanel: iml._Panel? }
+---@alias iml._FrameState { hoveredPanel: iml._Panel? }
 
 ---@alias iml._Click {original_x:number, original_y:number, total_dx:number,total_dy:number, last_frame_dx:number,last_frame_dy:number, panel_key:iml._Panel? }
 
 
 ---@type iml._Panel?
-local lastTopPanel = nil
+local lastHoveredPanel = nil
 
 local frameCount = 0
 
@@ -85,7 +85,7 @@ function iml.beginFrame()
     end
 
     frameState = {
-        topPanel = nil
+        hoveredPanel = nil
     }
 end
 
@@ -136,7 +136,7 @@ function iml.panel(x,y,w,h, key)
     -- If no key is specified,
     -- uses hash(x,y,w,h) as a key.
     if pointer_x and isInside(x,y,w,h, pointer_x, pointer_y) then
-        frameState.topPanel = {
+        frameState.hoveredPanel = {
             x=x,y=y, w=w,h=h,
             key = getKey(x,y,w,h,key)
         }
@@ -144,11 +144,20 @@ function iml.panel(x,y,w,h, key)
 end
 
 
+
+--- Pushes a "mask" onto the stack; elements outside of this area cannot be clicked.
+---  Useful for stencil-like operations.
+---@param x number
+---@param y number
+---@param w number
+---@param h number
 function iml.pushMask(x,y,w,h)
 
 end
 
 
+--- Pops a mask from the stack. 
+---  (Undos pushMask)
 function iml.popMask()
 
 end
@@ -156,7 +165,7 @@ end
 
 local function wasTop(key)
     -- returns whether this `key` was the top panel the previous frame
-    if lastTopPanel and lastTopPanel.key == key then
+    if lastHoveredPanel and lastHoveredPanel.key == key then
         return true
     end
     return false
@@ -265,7 +274,7 @@ end
 
 
 function iml.endFrame()
-    lastTopPanel = frameState.topPanel or nil
+    lastHoveredPanel = frameState.hoveredPanel or nil
     frameCount = frameCount + 1
     clickReleases = {}
     clickPresses = {}
@@ -285,7 +294,7 @@ function iml.mousepressed(x, y, button, istouch, presses)
         last_frame_dy = 0,
 
         -- the panel that was just clicked!
-        panel_key = (lastTopPanel and lastTopPanel.key) or nil
+        panel_key = (lastHoveredPanel and lastHoveredPanel.key) or nil
     }
 
     currentClicks[button] = cl
