@@ -7,11 +7,18 @@ local iml = {}
 ---@alias iml._Panel {x:number, y:number, w:number,h:number, key:any}
 ---@alias iml._FrameState { hoveredPanel: iml._Panel? }
 
----@alias iml._Click {original_x:number, original_y:number, total_dx:number,total_dy:number, last_frame_dx:number,last_frame_dy:number, panel_key:iml._Panel? }
+---@alias iml._Click {original_x:number, original_y:number, total_dx:number,total_dy:number, last_frame_dx:number,last_frame_dy:number, panel_key:any? }
 
 
 ---@type iml._Panel?
 local lastHoveredPanel = nil
+
+---@type iml._Panel?
+local selectedPanel = nil
+
+---@type string?
+local text = nil
+
 
 local frameCount = 0
 
@@ -99,6 +106,9 @@ local function hash(x,y,w,h)
         + w*(2^(ZEROS*2))
         + h*(2^ZEROS*3)
 end
+
+
+iml.hash = hash
 
 
 local function getKey(x,y,w,h, key)
@@ -208,6 +218,22 @@ end
 
 
 
+---@param x number
+---@param y number
+---@param w number
+---@param h number
+---@param key any
+---@return boolean
+function iml.isSelected(x,y,w,h, key)
+    assertIsFrame()
+    iml.panel(x,y,w,h, key)
+    key = getKey(x,y,w,h,key)
+    return (selectedPanel and selectedPanel.key == key) or false
+end
+
+
+
+
 --- Returns true ONCE if the region was just clicked.
 --- (ie ONLY the frame after `mousereleased`.)
 function iml.wasJustClicked(x,y,w,h, button, key)
@@ -227,14 +253,19 @@ end
 
 ---@param key any
 ---@param button integer
-function iml.getDrag(key, x,y,w,h, button)
+---@return number?, number?, iml._Click?
+function iml.consumeDrag(key, x,y,w,h, button)
     assertIsFrame()
     iml.panel(x,y,w,h, key)
     assert(key ~= nil and type(key) ~= "number", "Must provide a valid key")
+    ---@type iml._Click
     local cl = currentClicks[button]
     if cl and (cl.panel_key == key) and (not isClick(cl)) then
         -- its dragging this element!
-        return cl.last_frame_dx, cl.last_frame_dy
+        local dx, dy = cl.last_frame_dx, cl.last_frame_dy
+        cl.last_frame_dx = 0
+        cl.last_frame_dy = 0
+        return dx,dy, cl
     end
 end
 
@@ -273,11 +304,22 @@ end
 
 
 
+--- Returns and "consumes" text input
+---@return string?
+function iml.consumeText()
+    local t = text
+    text = nil
+    return t
+end
+
+
+
 function iml.endFrame()
     lastHoveredPanel = frameState.hoveredPanel or nil
     frameCount = frameCount + 1
     clickReleases = {}
     clickPresses = {}
+    text = nil
 end
 
 
@@ -296,6 +338,10 @@ function iml.mousepressed(x, y, button, istouch, presses)
         -- the panel that was just clicked!
         panel_key = (lastHoveredPanel and lastHoveredPanel.key) or nil
     }
+
+    if button == 1 then
+        selectedPanel = lastHoveredPanel
+    end
 
     currentClicks[button] = cl
     clickPresses[button] = cl
@@ -324,6 +370,11 @@ end
 function iml.setPointer(x,y)
     pointer_x = x
     pointer_y = y
+end
+
+
+function iml.textinput(txt)
+    text = (text or "") .. txt
 end
 
 
