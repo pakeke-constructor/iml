@@ -107,8 +107,9 @@ function elems.slider(slider, x,y,w,h, id)
 
     local dx,_,cl = iml.consumeDrag(id, cx-r*1.5,cy-r*1.5, r*3,r*3, 1)
     if dx and cl then
-        local change = dx / w
-        local newVal = currentVal + (change * delta)
+        local px, _ = math.min(math.max(iml.getPointer(), x), x+w)
+        local norm = (px-x)/w
+        local newVal = min + norm*delta
         slider.table[slider.key] = math.min(math.max(newVal, min), max)
     end
 end

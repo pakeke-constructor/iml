@@ -367,10 +367,18 @@ function iml.keyreleased(key, scancode, isrepeat)
 
 end
 
+
+
 function iml.setPointer(x,y)
     pointer_x = x
     pointer_y = y
 end
+
+
+function iml.getPointer()
+    return pointer_x, pointer_y
+end
+
 
 
 function iml.textinput(txt)
